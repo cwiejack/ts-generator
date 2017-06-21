@@ -35,17 +35,16 @@ fun assertGeneratedCode(klass: KClass<*>,
                         expectedOutput: Set<String>,
                         mappings: Map<KClass<*>, String> = mapOf(),
                         classTransformers: List<ClassTransformer> = listOf(),
-                        ignoreSuperclasses: Set<KClass<*>> = setOf())
-{
+                        ignoreSuperclasses: Set<KClass<*>> = setOf()) {
     val generator = TypeScriptGenerator(listOf(klass), mappings, classTransformers,
-        ignoreSuperclasses, intTypeName = "int")
+            ignoreSuperclasses, intTypeName = "int")
 
     val expected = expectedOutput
-        .map(TypeScriptDefinitionFactory::fromCode)
-        .toSet()
+            .map(TypeScriptDefinitionFactory::fromCode)
+            .toSet()
     val actual = generator.individualDefinitions
-        .map(TypeScriptDefinitionFactory::fromCode)
-        .toSet()
+            .map(TypeScriptDefinitionFactory::fromCode)
+            .toSet()
 
     expected.should.equal(actual)
 }
@@ -53,61 +52,82 @@ fun assertGeneratedCode(klass: KClass<*>,
 class Empty
 class ClassWithMember(val a: String)
 class SimpleTypes(
-    val aString: String,
-    var anInt: Int,
-    val aDouble: Double,
-    private val privateMember: String
+        val aString: String,
+        var anInt: Int,
+        val aDouble: Double,
+        private val privateMember: String
 )
+
 class ClassWithLists(
-    val aList: List<String>,
-    val anArrayList: ArrayList<String>
+        val aList: List<String>,
+        val anArrayList: ArrayList<String>
 )
+
 class ClassWithArray(
-    val items: Array<String>
+        val items: Array<String>
 )
+
 class Widget(
-    val name: String,
-    val value: Int
+        val name: String,
+        val value: Int
 )
+
 class ClassWithDependencies(
-    val widget: Widget
+        val widget: Widget
 )
+
 class ClassWithNullables(
-    val widget: Widget?
+        val widget: Widget?
 )
+
 class ClassWithComplexNullables(
-    val maybeWidgets: List<String?>?,
-    val maybeWidgetsArray: Array<String?>?
+        val maybeWidgets: List<String?>?,
+        val maybeWidgetsArray: Array<String?>?
 )
+
 class ClassWithNullableList(
-    val strings: List<String>?
+        val strings: List<String>?
 )
-class GenericClass<A, out B, out C: List<Any>>(
-    val a: A,
-    val b: List<B?>,
-    val c: C,
-    private val privateMember: A
+
+class GenericClass<A, out B, out C : List<Any>>(
+        val a: A,
+        val b: List<B?>,
+        val c: C,
+        private val privateMember: A
 )
+
 open class BaseClass(val a: Int)
-class DerivedClass(val b: List<String>): BaseClass(4)
+class DerivedClass(val b: List<String>) : BaseClass(4)
 class ClassWithMethods(val propertyMethod: () -> Int) {
     fun regularMethod() = 4
 }
+
 abstract class AbstractClass(val concreteProperty: String) {
     abstract val abstractProperty: Int
     abstract fun abstractMethod()
 }
+
 enum class Direction {
     North,
     West,
     South,
     East
 }
+
 class ClassWithEnum(val direction: Direction)
 data class DataClass(val prop: String)
 class ClassWithAny(val required: Any, val optional: Any?)
 
-class Tests: Spek({
+class Tests : Spek({
+
+    it("handle generic interface")  {
+        assertGeneratedCode(JavaClassWithGenericInterface::class, setOf("""
+interface GenericInterface<T> {
+}""","""
+interface JavaClassWithGenericInterface extends GenericInterface<string> {
+}"""))
+    }
+
     it("handles empty class") {
         assertGeneratedCode(Empty::class, setOf("""
 interface Empty {
@@ -276,18 +296,20 @@ interface ClassWithDependencies {
         PROP: string;
     }
     """), classTransformers = listOf(
-            object: ClassTransformer {
-                /**
-                 * Returns the property name that will be included in the
-                 * definition.
-                 *
-                 * If it returns null, the value of the next class transformer
-                 * in the pipeline is used.
-                 */
-                override fun transformPropertyName(propertyName: String, property: KProperty<*>, klass: KClass<*>): String {
-                    return propertyName.toUpperCase()
+                object : ClassTransformer {
+                    /**
+                     * Returns the property name that will be included in the
+                     * definition.
+                     *
+                     * If it returns null, the value of the next class transformer
+                     * in the pipeline is used.
+                     */
+                    override fun transformPropertyName(propertyName: String,
+                                                       property: KProperty<*>,
+                                                       klass: KClass<*>): String {
+                        return propertyName.toUpperCase()
+                    }
                 }
-            }
         ))
     }
 
@@ -302,11 +324,13 @@ interface Widget {
     VALUE: int;
 }
 """), classTransformers = listOf(
-            object : ClassTransformer {
-                override fun transformPropertyName(propertyName: String, property: KProperty<*>, klass: KClass<*>): String {
-                    return propertyName.toUpperCase()
-                }
-            }.onlyOnSubclassesOf(Widget::class)
+                object : ClassTransformer {
+                    override fun transformPropertyName(propertyName: String,
+                                                       property: KProperty<*>,
+                                                       klass: KClass<*>): String {
+                        return propertyName.toUpperCase()
+                    }
+                }.onlyOnSubclassesOf(Widget::class)
         ))
     }
 
@@ -316,15 +340,15 @@ interface Widget {
         prop: int | null;
     }
     """), classTransformers = listOf(
-            object : ClassTransformer {
-                override fun transformPropertyType(type: KType, property: KProperty<*>, klass: KClass<*>): KType {
-                    if (klass == DataClass::class && property.name == "prop") {
-                        return Int::class.createType(nullable = true)
-                    } else {
-                        return type
+                object : ClassTransformer {
+                    override fun transformPropertyType(type: KType, property: KProperty<*>, klass: KClass<*>): KType {
+                        if (klass == DataClass::class && property.name == "prop") {
+                            return Int::class.createType(nullable = true)
+                        } else {
+                            return type
+                        }
                     }
                 }
-            }
         ))
     }
 
@@ -335,11 +359,12 @@ interface Widget {
         aDouble: number;
     }
     """), classTransformers = listOf(
-            object : ClassTransformer {
-                override fun transformPropertyList(properties: List<KProperty<*>>, klass: KClass<*>): List<KProperty<*>> {
-                    return properties.filter { it.name != "anInt" }
+                object : ClassTransformer {
+                    override fun transformPropertyList(properties: List<KProperty<*>>,
+                                                       klass: KClass<*>): List<KProperty<*>> {
+                        return properties.filter { it.name != "anInt" }
+                    }
                 }
-            }
         ))
     }
 
@@ -353,11 +378,13 @@ interface Widget {
         A: int;
     }
     """), classTransformers = listOf(
-            object : ClassTransformer {
-                override fun transformPropertyName(propertyName: String, property: KProperty<*>, klass: KClass<*>): String {
-                    return propertyName.toUpperCase()
-                }
-            }.onlyOnSubclassesOf(BaseClass::class)
+                object : ClassTransformer {
+                    override fun transformPropertyName(propertyName: String,
+                                                       property: KProperty<*>,
+                                                       klass: KClass<*>): String {
+                        return propertyName.toUpperCase()
+                    }
+                }.onlyOnSubclassesOf(BaseClass::class)
         ))
     }
 
@@ -369,18 +396,22 @@ interface Widget {
         anInt12: int;
     }
     """), classTransformers = listOf(
-            object : ClassTransformer {
-                override fun transformPropertyName(propertyName: String, property: KProperty<*>, klass: KClass<*>): String {
-                    return propertyName + "1"
+                object : ClassTransformer {
+                    override fun transformPropertyName(propertyName: String,
+                                                       property: KProperty<*>,
+                                                       klass: KClass<*>): String {
+                        return propertyName + "1"
+                    }
+                },
+                object : ClassTransformer {
+                },
+                object : ClassTransformer {
+                    override fun transformPropertyName(propertyName: String,
+                                                       property: KProperty<*>,
+                                                       klass: KClass<*>): String {
+                        return propertyName + "2"
+                    }
                 }
-            },
-            object : ClassTransformer {
-            },
-            object : ClassTransformer {
-                override fun transformPropertyName(propertyName: String, property: KProperty<*>, klass: KClass<*>): String {
-                    return propertyName + "2"
-                }
-            }
         ))
     }
 
@@ -422,25 +453,25 @@ interface Widget {
         surname: string | null;
     }
     """), classTransformers = listOf(
-            object : ClassTransformer {
-                override fun transformPropertyType(
-                    type: KType,
-                    property: KProperty<*>,
-                    klass: KClass<*>
-                ): KType {
-                    val bean = Introspector.getBeanInfo(klass.java)
-                        .propertyDescriptors
-                        .find { it.name == property.name }
+                object : ClassTransformer {
+                    override fun transformPropertyType(
+                            type: KType,
+                            property: KProperty<*>,
+                            klass: KClass<*>
+                    ): KType {
+                        val bean = Introspector.getBeanInfo(klass.java)
+                                .propertyDescriptors
+                                .find { it.name == property.name }
 
-                    val getterReturnType = bean?.readMethod?.kotlinFunction?.returnType
-                    if (getterReturnType?.classifier == Optional::class) {
-                        val wrappedType = getterReturnType.arguments.first().type!!
-                        return wrappedType.withNullability(true)
-                    } else {
-                        return type
+                        val getterReturnType = bean?.readMethod?.kotlinFunction?.returnType
+                        if (getterReturnType?.classifier == Optional::class) {
+                            val wrappedType = getterReturnType.arguments.first().type!!
+                            return wrappedType.withNullability(true)
+                        } else {
+                            return type
+                        }
                     }
                 }
-            }
         ))
     }
 })
